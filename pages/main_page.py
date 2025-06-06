@@ -1,3 +1,4 @@
+import allure # Импортируем allure, если еще не импортирован
 from selenium.webdriver.common.by import By
 from .base_page import BasePage
 
@@ -20,29 +21,34 @@ class MainPage(BasePage):
         super().__init__(driver)
         self.driver.get(self.URL)
 
+    @allure.step("Кликнуть на вопрос аккордеона по индексу {question_index} и получить текст ответа")
     def click_question_and_get_answer(self, question_index):
-        questions = self.find_elements(self.ACCORDION_QUESTIONS_LOCATORS)
-        # Скроллим до элемента, чтобы он был виден и кликабелен
-        self.driver.execute_script("arguments[0].scrollIntoView();", questions[question_index])
-        self.click_element((self.ACCORDION_QUESTIONS_LOCATORS[0], self.ACCORDION_QUESTIONS_LOCATORS[1] + f"[{question_index + 1}]"))
-        # Теперь получаем текст ответа
-        answers = self.find_elements(self.ACCORDION_ANSWERS_LOCATORS)
-        # Важно: иногда ответ может появиться не сразу, нужно подождать его видимости
-        self.find_element((self.ACCORDION_ANSWERS_LOCATORS[0], self.ACCORDION_ANSWERS_LOCATORS[1] + f"[{question_index + 1}]"))
-        return answers[question_index].text
+        # Чтобы не получать все вопросы снова, можно передать локатор конкретного вопроса
+        # Однако, если вопросы динамические, лучше сначала получить все и скроллить к конкретному
+        question_locator_for_scroll = (self.ACCORDION_QUESTIONS_LOCATORS[0],
+                                        self.ACCORDION_QUESTIONS_LOCATORS[1] + f"[{question_index + 1}]")
+        self.scroll_to_element(question_locator_for_scroll) # Используем новый метод скролла из BasePage
+        self.click_element(question_locator_for_scroll)
 
+        answer_locator = (self.ACCORDION_ANSWERS_LOCATORS[0],
+                          self.ACCORDION_ANSWERS_LOCATORS[1] + f"[{question_index + 1}]")
+        # Ждем, пока ответ станет видимым, и получаем его текст
+        return self.get_element_text(answer_locator) # Используем метод получения текста из BasePage
+
+    @allure.step("Кликнуть по кнопке 'Заказать' ({location})")
     def click_order_button(self, location="top"):
         if location == "top":
             self.click_element(self.ORDER_BUTTON_TOP)
         elif location == "bottom":
-            # Скроллим до нижней кнопки
-            self.driver.execute_script("arguments[0].scrollIntoView();", self.find_element(self.ORDER_BUTTON_BOTTOM))
+            self.scroll_to_element(self.ORDER_BUTTON_BOTTOM) # Используем новый метод скролла
             self.click_element(self.ORDER_BUTTON_BOTTOM)
         else:
             raise ValueError("Некорректное значение 'location'. Допустимо 'top' или 'bottom'.")
 
+    @allure.step("Кликнуть по логотипу Самоката")
     def click_scooter_logo(self):
         self.click_element(self.SCOOTER_LOGO)
 
+    @allure.step("Кликнуть по логотипу Яндекса")
     def click_yandex_logo(self):
         self.click_element(self.YANDEX_LOGO)
